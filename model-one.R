@@ -16,6 +16,7 @@ dataas <- dataas[!duplicated(dataas), ]
 dr_data <- data.frame(readxl::read_xlsx(dr_data))
 
 filtered_more_then_median <- (subset(dataas, count > 20))
+weights <- filtered_more_then_median[,3]
 net <- filtered_more_then_median[,1:2]
 
 eAttr <- data.frame(dataas$count)
@@ -30,6 +31,7 @@ nAttr <- as.vector(forum_data[,!names(forum_data) %in% c("Forum", "Eindtotaal")]
 noMessages <- nAttr$Number.Of.Messages
 mortality <- dr_data$Mortality
 avg_diagnose_age <- dr_data$Average.age.of.diagnosis
+
 
 EdgeList <- snafun::make_edgelist(net)
 NodeList <- snafun::make_nodelist(net)
@@ -56,6 +58,8 @@ surveynet <- surveynet %>%
   set_vertex_attr("mortality", value = mortality)
 surveynet <- surveynet %>%
   set_vertex_attr("avg_diagnose_age", value = avg_diagnose_age)
+
+igraph::E(surveynet)$weight <- weights
 
 plot(surveynet,
            edge.color = igraph::E(surveynet)/15,        
@@ -131,6 +135,9 @@ summary(w_0)
 
 
 texreg::screenreg(list(w_all, w_1, w_2, w_0))
+w_2
+
+
 
 # Diseases were users interact wintin these 2 fora's tend 
 
