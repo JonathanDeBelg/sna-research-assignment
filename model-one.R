@@ -1,9 +1,3 @@
-library(igraph)
-library(network)
-library(snafun)
-library("readxl")
-library(texreg)
-
 data_path <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/formatted_data.csv'
 forum_user_data <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/formatted_forum_user_data.xlsx'
 dr_data <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/Death ratio.xlsx'

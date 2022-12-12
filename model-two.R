@@ -1,9 +1,3 @@
-library(igraph)
-library(network)
-library(snafun)
-library("readxl")
-library(texreg)
-
 data_path <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/formatted_data.csv'
 forum_user_data <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/formatted_forum_user_data.xlsx'
 dr_data <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/Death ratio.xlsx'
@@ -34,14 +28,10 @@ surveynet <- igraph::graph_from_data_frame(
   NodeList, 
   directed=FALSE)
 
-surveynet <- surveynet %>%
-  set_vertex_attr("no_messages", value = noMessages)
-surveynet <- surveynet %>%
-  set_vertex_attr("mortality", value = mortality)
-surveynet <- surveynet %>%
-  set_vertex_attr("avg_diagnose_age", value = avg_diagnose_age)
-
-igraph::E(surveynet)$weight <- weights
+surveynet <- snafun::add_vertex_attributes(surveynet, attr_name = "no_messages", noMessages)
+surveynet <- snafun::add_vertex_attributes(surveynet, attr_name = "mortality", mortality)
+surveynet <- snafun::add_vertex_attributes(surveynet, attr_name = "avg_diagnose_age", avg_diagnose_age)
+surveynet <- snafun::add_edge_attributes(surveynet, attr_name = "weight", weights)
 
 plot(surveynet,
      edge.color = igraph::E(surveynet)/15,        
@@ -53,16 +43,12 @@ plot(surveynet,
      vertex.label.color = 'black')
 
 matrix_path <- '/Users/jonathan/Documents/JADS/year-1/social-network-analysis/sna-research-assignment/data/mental_disease_matrix.xlsx'
-matrix_table <- read_excel(matrix_path)
+matrix_table <- readxl::read_excel(matrix_path)
 com_matrix <- data.matrix(matrix_table)
 com_matrix
 
-mental_disease_fora_net <- to_network(surveynet)
+mental_disease_fora_net <- snafun::to_network(surveynet)
 mental_disease_fora_net
-surveynet
-
-md_model <- ergm::ergm(mental_disease_fora_net ~ edges)
-summary(md_model)
 
 adj_weight <- igraph::as_adjacency_matrix(surveynet, attr="weight")
 matrix_weight <- as.matrix(adj_weight)
@@ -73,20 +59,48 @@ cov_data <- data.frame(
   no_messages = noMessages,
   mortality = mortality
 )
+subset <- cov_data[2]
 
-cov_data
+subset$diagnose_age <- round(subset$diagnose_age)
+class(subset)
+rownames(subset)
+colnames(matrix_weight) == rownames(matrix_weight)
+rownames(subset) <- NodeList
+nrow(subset)
 
-formula2 <- matrix_weight ~ edges + mutual + netcov(com_matrix)
+matrix_weight
+formula2 <- matrix_weight ~ edges + mutual + absdiff("diagnose_age") + netcov(com_matrix)
 formula2
 m2 <- GERGM::gergm(formula2,
-                   covariate_data = cov_data,
-                   number_of_networks_to_simulate = 60000,
-                   thin = 1/100,
-                   proposal_variance = 0.05,
-                   MCMC_burnin = 1000,
-                   seed = 456,
-                   convergence_tolerance = 0.5,
+                   covariate_data = subset,
+                   number_of_networks_to_simulate = 100000,
+                   MCMC_burnin = 10000,
+                   thin = 1/10,
                    parallel = TRUE,
-                   cores = 5)
-m2
-GERGM::GOF(m2)
+                   cores = 6)
+summary(m2)
+(EstSE <- rbind(t(attributes(m2)$theta.coef),
+                t(attributes(m2)$lambda.coef)))
+
+
+lower = -0.07217179 - 0.04763048*(-qnorm((1 - 0.95)/2))
+upper = -0.07217179 + 0.04763048*(-qnorm((1 - 0.95)/2))
+
+lower
+upper
+
+GERGM::Trace_Plot(m2)
+GERGM::Estimate_Plot(m2)
+fit.gof <- GERGM::GOF(m2)
+plot(fit.gof)
+
+odds <- exp(-0.07217179)
+# The odds forming a tie if they have the same age is about 0.93:1  
+# the odds of interacting within the fora 
+
+# If you are interested in betting, then think of this as the odds of forming a 
+# business tie being 13.7:1 in the presence of a marriage tie. Sounds like a pretty 
+# good bet.
+
+
+  
